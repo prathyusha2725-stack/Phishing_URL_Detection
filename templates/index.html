@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>PhishGuard | URL Security Scanner</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <div class="shield">🛡️</div>
+
+        <p class="eyebrow">AI-POWERED SECURITY</p>
+        <h1>PhishGuard</h1>
+
+        <p class="subtitle">
+            Check a website URL for potential phishing patterns
+            using machine learning.
+        </p>
+
+        <form id="scan-form">
+            <label for="url">Website URL</label>
+
+            <input
+                type="text"
+                id="url"
+                name="url"
+                placeholder="https://example.com"
+                maxlength="2048"
+                autocomplete="url"
+                required
+            >
+
+            <button type="submit" id="scan-button">
+                Scan URL
+            </button>
+        </form>
+
+        <div id="result" class="result hidden"
+             role="status" aria-live="polite"></div>
+
+        <p class="notice">
+            Do not visit suspicious links to test them.
+            Predictions are not guarantees of safety.
+        </p>
+    </main>
+
+    <script>
+        const form = document.getElementById("scan-form");
+        const input = document.getElementById("url");
+        const button = document.getElementById("scan-button");
+        const resultBox = document.getElementById("result");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const url = input.value.trim();
+
+            resultBox.className = "result";
+            resultBox.textContent = "Analyzing URL...";
+            button.disabled = true;
+            button.textContent = "Scanning...";
+
+            try {
+                const response = await fetch("/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.error || "Unable to analyze URL."
+                    );
+                }
+
+                resultBox.className =
+                    "result " +
+                    (data.prediction === 1
+                        ? "safe"
+                        : "danger");
+
+                const heading = document.createElement("h2");
+                heading.textContent = data.result;
+
+                const submitted = document.createElement("p");
+                submitted.textContent = "URL: " + data.url;
+
+                const risk = document.createElement("p");
+                risk.textContent = data.risk;
+
+                const disclaimer = document.createElement("p");
+                disclaimer.textContent = data.message;
+
+                resultBox.replaceChildren(
+                    heading, submitted, risk, disclaimer
+                );
+
+            } catch (error) {
+                resultBox.className = "result danger";
+                resultBox.textContent = error.message;
+            } finally {
+                button.disabled = false;
+                button.textContent = "Scan URL";
+            }
+        });
+    </script>
+</body>
+</html>
